@@ -13,8 +13,10 @@ import re
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 def mars_scrape_all():
 
-    # Initiate headless driver for deployment
-    browser = Browser("chrome", executable_path="chromedriver", headless=True)
+    # Set the executable path and initialize the chrome browser in splinter
+    executable_path = {'executable_path': 'chromedriver_win32/chromedriver'}
+    browser = Browser('chrome', **executable_path, headless=False)
+    # browser = Browser("chrome", executable_path="chromedriver", headless=True)
 
     # Scrape Mars data:
     # Get Mars news
@@ -156,25 +158,41 @@ def get_mars_hemispheres(browser):
 # Mars twiiter weather 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 def get_mars_twitter_weather(browser):
-    url = "https://twitter.com/marswxreport?lang=en"
-    browser.visit(url)
 
-    # Pause before extracting  html
-    time.sleep(5)
-
-    html = browser.html
-    weather_soup = BeautifulSoup(html, "html.parser")
-
-    tweet_attrs = {"class": "tweet", "data-name": "Mars Weather"}
-    # Find tweet (data-name `Mars Weather`)
-    mars_weather_tweet = weather_soup.find("div", attrs=tweet_attrs)
-
-    # Text from mars_weather_tweet 
     try:
-        mars_weather = mars_weather_tweet.find("p", "tweet-text").get_text()
-    except AttributeError:
-        pattern = re.compile(r'sol')
-        mars_weather = weather_soup.find('span', text=pattern).text
+        url = "https://twitter.com/marswxreport?lang=en"
+        browser.visit(url)
+        
+        # Pause for 5 seconds to load
+        time.sleep(5)
+
+        html = browser.html
+        weather_soup = BeautifulSoup(html, "html.parser")
+
+        # The wetaher updates are stored under element 'span' and class = "css-901oao css-16my406 r-1qd0xha r-ad9z0x r-bcqeeo r-qvutc0"
+        # Use soup find to get the 1st found weather update
+
+        # Note: Mars weather tweets are under the following tags in sequence: 
+        # div class="css-1dbjc4n r-my5ep6 r-qklmqi r-1adg3ll"
+        # article class="css-1dbjc4n r-1loqt21 r-1udh08x r-o7ynqc r-1j63xyz"
+        # div class "css-1dbjc4n r-1j3t67a"
+        # div class="css-1dbjc4n r-18u37iz r-thb0q2"
+        # div class="css-1dbjc4n r-1iusvr4 r-16y2uox r-1777fci r-5f2r5o r-1mi0q7o"
+        # div class="css-901oao r-hkyrab r-1qd0xha r-a023e6 r-16dba41 r-ad9z0x r-bcqeeo r-bnwqim r-qvutc0"
+        # span class="css-901oao css-16my406 r-1qd0xha r-ad9z0x r-bcqeeo r-qvutc0"
+        #
+        # Just by using span results in other sections that are not weather tweets, but if searched by 
+        # div class="css-901oao r-hkyrab r-1qd0xha r-a023e6 r-16dba41 r-ad9z0x r-bcqeeo r-bnwqim r-qvutc0" 
+        # followed by
+        # span class="css-901oao css-16my406 r-1qd0xha r-ad9z0x r-bcqeeo r-qvutc0"
+        # results in the last tweet about mars weather 
+
+        mars_weather_div = weather_soup.find('div', class_="css-901oao r-hkyrab r-1qd0xha r-a023e6 r-16dba41 r-ad9z0x r-bcqeeo r-bnwqim r-qvutc0")
+        mars_weather_span = mars_weather_div.find('span', class_="css-901oao css-16my406 r-1qd0xha r-ad9z0x r-bcqeeo r-qvutc0")
+        mars_weather = mars_weather_span.text
+
+    except:
+        mars_weather = None
 
     # Return
     return mars_weather
